@@ -382,7 +382,7 @@ class Dashboard extends React.Component {
   if (that.state[that.keyToAnomaly[key]] > 4) {
     statusIndicator = <status-indicator negative pulse></status-indicator>
     statusText = "Severe Anomaly Detected"
-    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=error&source=" + key + "&score=" + that.state[that.keyToAnomaly[key]])
+    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=error&source=" + key + "&value=" + that.state[key].series[0][that.state[key].series[0].length - 1] + "&score=" + that.state[that.keyToAnomaly[key]])
         .then(res => res.json())
         .then(
           (result) => {
@@ -392,10 +392,10 @@ class Dashboard extends React.Component {
             // TODO: what's an error?
           }
         )
-  } else if (that.state[that.keyToAnomaly[key]] > 2.5) {
+  } else if (that.state[that.keyToAnomaly[key]] > 3) {
     statusText = "Slight Anomaly Detected"
     statusIndicator = <status-indicator intermediary pulse></status-indicator>
-    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=warning&source=" + key + "&score=" + that.state[that.keyToAnomaly[key]])
+    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=warning&source=" + key + "&value=" + that.state[key].series[0][that.state[key].series[0].length - 1] + "&score=" + that.state[that.keyToAnomaly[key]])
         .then(res => res.json())
         .then(
           (result) => {
