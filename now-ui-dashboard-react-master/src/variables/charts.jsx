@@ -250,7 +250,7 @@ const dashboardPanelChart = {
         },
         ticks: {
           beginAtZero: true,
-          max: 5,
+          max: 10,
           fontColor: "#FFFFFF",
           maxTicksLimit: 7
         }
