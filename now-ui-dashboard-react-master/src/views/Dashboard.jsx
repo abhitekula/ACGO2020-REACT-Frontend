@@ -58,35 +58,43 @@ class Dashboard extends React.Component {
   state = {
       engine_coolant_temp: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       engine_oil_press: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       engine_speed: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       fuel_delivery_pressures: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       fuel_level: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       fuel_rate: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       hydr_oil_temp: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       spray_nozzle_pressure: {
           labels: [],
-          series: [[]]
+          series: [[]],
+          anomalies: [0, 0, 0]
       },
       anomaly: {
         labels: [],
@@ -97,7 +105,7 @@ class Dashboard extends React.Component {
     engine_coolant_temp: "Engine Coolant Temperature",          
     engine_oil_press: "Engine Oil Pressure",
     engine_speed: "Engine Speed",
-    fuel_delivery_pressures: "Fuel Delivery Pressures",
+    fuel_delivery_pressures: "Fuel Delivery Pressure",
     fuel_level: "Fuel Level",
     fuel_rate: "Fuel Rate",
     hydr_oil_temp: "Hydr Oil Temperature",
@@ -144,8 +152,19 @@ class Dashboard extends React.Component {
 
       return {
           labels: labels,
-          series: series
+          series: series,
+          anomalies: prev.anomalies
       }
+  }
+
+  getAnomalyLevel(anomaly) {
+    if (anomaly > 4) {
+      return 2
+    } else if (anomaly > 3) {
+      return 1
+    } else {
+      return 0
+    }
   }
   refreshView(state) {
       let curr = this.data
@@ -201,35 +220,43 @@ class Dashboard extends React.Component {
                   break
 
               case "COOLANT_ANOMALY_SCORE":
+                  engine_coolant_temp.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   bigBoyThis.setState({ coolantAnomalyScore: curr[key]})
                   break
 
               case "HO_ANOMALY_SCORE":
                   bigBoyThis.setState({ hoAnomalyScore: curr[key]})
+                  hydr_oil_temp.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "SN_ANOMALY_SCORE":
                   bigBoyThis.setState({ snAnomalyScore: curr[key]})
+                  spray_nozzle_pressure.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "OIL_ANOMALY_SCORE":
                   bigBoyThis.setState({ oilAnomalyScore: curr[key]})
+                  engine_oil_press.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "SPEED_ANOMALY_SCORE":
                   bigBoyThis.setState({ speedAnomalyScore: curr[key]})
+                  engine_speed.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "FDP_ANOMALY_SCORE":
                   bigBoyThis.setState({ fdpAnomalyScore: curr[key]})
+                  fuel_delivery_pressures.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "FL_ANOMALY_SCORE":
                   bigBoyThis.setState({ flAnomalyScore: curr[key]})
+                  fuel_level.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
 
               case "FR_ANOMALY_SCORE":
                   bigBoyThis.setState({ frAnomalyScore: curr[key]})
+                  fuel_rate.anomalies[bigBoyThis.getAnomalyLevel(curr[key])]++
                   break
           }
       })
@@ -274,7 +301,7 @@ class Dashboard extends React.Component {
   startGettingData() {
     var intervalId = setInterval(() => {
       this.intervalExpired()
-    }, 1000);
+    }, 2000);
     this.setState({ intervalId: intervalId });
   }
   componentDidMount() {
@@ -349,6 +376,7 @@ class Dashboard extends React.Component {
                   if (key == "intervalId" || key.toLowerCase().includes("anomaly")) {
                     return null
                   }
+
                   dashboardShippedProductsChart2.data = canvas => {
     var ctx = canvas.getContext("2d");
     var gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
@@ -379,7 +407,8 @@ class Dashboard extends React.Component {
   }
   let statusText = "No Anomalies Detected"
   let statusIndicator = <status-indicator positive pulse></status-indicator>
-  if (that.state[that.keyToAnomaly[key]] > 4) {
+  const anomalyLevel = that.getAnomalyLevel(that.state[that.keyToAnomaly[key]])
+  if (anomalyLevel == 2) {
     statusIndicator = <status-indicator negative pulse></status-indicator>
     statusText = "Severe Anomaly Detected"
     fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=error&source=" + key + "&value=" + that.state[key].series[0][that.state[key].series[0].length - 1] + "&score=" + that.state[that.keyToAnomaly[key]])
@@ -392,7 +421,7 @@ class Dashboard extends React.Component {
             // TODO: what's an error?
           }
         )
-  } else if (that.state[that.keyToAnomaly[key]] > 3) {
+  } else if (anomalyLevel == 1) {
     statusText = "Slight Anomaly Detected"
     statusIndicator = <status-indicator intermediary pulse></status-indicator>
     fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=warning&source=" + key + "&value=" + that.state[key].series[0][that.state[key].series[0].length - 1] + "&score=" + that.state[that.keyToAnomaly[key]])
@@ -406,7 +435,7 @@ class Dashboard extends React.Component {
           }
         )
   }
-
+      const anomalies = that.state[key]["anomalies"]
                   return (
                     <Col xs={12} md={4}>
               <Card className="card-chart">
@@ -424,7 +453,7 @@ class Dashboard extends React.Component {
                 </CardBody>
                 <CardFooter>
                   <div className="stats">
-                    {statusText}
+                    {statusText} <br/>Warnings: {anomalies[1]}, Dangers: {anomalies[2]}
                   </div>
                   {statusIndicator}
                 </CardFooter>
