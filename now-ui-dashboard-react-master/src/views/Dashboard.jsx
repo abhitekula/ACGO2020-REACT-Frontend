@@ -389,7 +389,7 @@ class Dashboard extends React.Component {
       labels: that.state[key].labels,
       datasets: [
         {
-          label: "Active Users",
+          label: "",
           borderColor: (key == "hydr_oil_temp" || key == "spray_nozzle_pressure") ? "#00FF00" : "#0000FF",
           pointBorderColor: "#FFF",
           pointBackgroundColor: (key == "hydr_oil_temp" || key == "spray_nozzle_pressure") ? "#00FF00" : "#0000FF",
