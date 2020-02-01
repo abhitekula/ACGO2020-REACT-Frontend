@@ -19,6 +19,9 @@ import React from "react";
 // react plugin used to create charts
 import { Line, Bar } from "react-chartjs-2";
 
+import 'status-indicator/styles.css'
+
+
 // reactstrap components
 import {
   Card,
@@ -85,13 +88,9 @@ class Dashboard extends React.Component {
           labels: [],
           series: [[]]
       },
-      engine_anomaly: {
+      anomaly: {
         labels: [],
-        series: [[]]
-      },
-      equipment_anomaly: {
-        labels: [],
-        series: [[]]
+        series: [[], []]
       },
   }
   keyToFieldName = {
@@ -103,8 +102,20 @@ class Dashboard extends React.Component {
     fuel_rate: "Fuel Rate",
     hydr_oil_temp: "Hydr Oil Temperature",
     spray_nozzle_pressure: "Spray Nozzle Pressure",
-    engine_anomaly: "Engine Anomaly",
-    equipment_anomaly: "Equipment Anomaly"
+    anomaly: {
+      engine_anomaly: "Engine Anomaly",
+      equipment_anomaly: "Equipment Anomaly"
+    }
+  }
+  keyToAnomaly = {
+    engine_coolant_temp: "coolantAnomalyScore",          
+    engine_oil_press: "oilAnomalyScore",
+    engine_speed: "speedAnomalyScore",
+    fuel_delivery_pressures: "fdpAnomalyScore",
+    fuel_level: "flAnomalyScore",
+    fuel_rate: "frAnomalyScore",
+    hydr_oil_temp: "hoAnomalyScore",
+    spray_nozzle_pressure: "snAnomalyScore",
   }
   update(prev, idx, curr) {
       const NUM_OF_ITEMS = 12
@@ -120,11 +131,15 @@ class Dashboard extends React.Component {
           }
       }
 
-      if (labels.length > NUM_OF_ITEMS && series.length == idx + 1) {
-          labels = labels.slice(1, NUM_OF_ITEMS + 1)
-          for (let i = 0; i < series.length; i++) {
-              series[i] = series[i].slice(1, NUM_OF_ITEMS + 1)
-          }
+      if (labels.length >= NUM_OF_ITEMS) {
+        if (series.length == idx + 1) {
+          labels = labels.slice(1)
+        }
+          // labels = labels.slice(1)
+          // for (let i = 0; i < series.length; i++) {
+          //     series[i] = series[i].slice(1)
+          // }
+          series[idx] = series[idx].slice(1)
       }
 
       return {
@@ -142,9 +157,7 @@ class Dashboard extends React.Component {
       let fuel_rate = state.fuel_rate
       let hydr_oil_temp = state.hydr_oil_temp
       let spray_nozzle_pressure = state.spray_nozzle_pressure
-      let engine_anomaly = state.engine_anomaly
-      let equipment_anomaly = state.equipment_anomaly
-      console.log(state)
+      let anomaly = state.anomaly
       let bigBoyThis = this;
       Object.keys(curr).map(function(key) {
           switch(key) {
@@ -181,10 +194,42 @@ class Dashboard extends React.Component {
 
               case "ANOMALY_SCORE":
                   if (curr["ENGINE_COOLANT_TEMP"] == undefined) {
-                    equipment_anomaly = bigBoyThis.update(equipment_anomaly, 0, curr[key])
+                    anomaly = bigBoyThis.update(anomaly, 0, curr[key])
                   } else {
-                    engine_anomaly = bigBoyThis.update(engine_anomaly, 0, curr[key])
+                    anomaly = bigBoyThis.update(anomaly, 1, curr[key])
                   }
+                  break
+
+              case "COOLANT_ANOMALY_SCORE":
+                  bigBoyThis.setState({ coolantAnomalyScore: curr[key]})
+                  break
+
+              case "HO_ANOMALY_SCORE":
+                  bigBoyThis.setState({ hoAnomalyScore: curr[key]})
+                  break
+
+              case "SN_ANOMALY_SCORE":
+                  bigBoyThis.setState({ snAnomalyScore: curr[key]})
+                  break
+
+              case "OIL_ANOMALY_SCORE":
+                  bigBoyThis.setState({ oilAnomalyScore: curr[key]})
+                  break
+
+              case "SPEED_ANOMALY_SCORE":
+                  bigBoyThis.setState({ speedAnomalyScore: curr[key]})
+                  break
+
+              case "FDP_ANOMALY_SCORE":
+                  bigBoyThis.setState({ fdpAnomalyScore: curr[key]})
+                  break
+
+              case "FL_ANOMALY_SCORE":
+                  bigBoyThis.setState({ flAnomalyScore: curr[key]})
+                  break
+
+              case "FR_ANOMALY_SCORE":
+                  bigBoyThis.setState({ frAnomalyScore: curr[key]})
                   break
           }
       })
@@ -198,8 +243,7 @@ class Dashboard extends React.Component {
           fuel_rate: fuel_rate,
           hydr_oil_temp: hydr_oil_temp,
           spray_nozzle_pressure: spray_nozzle_pressure,
-          engine_anomaly: engine_anomaly,
-          equipment_anomaly: equipment_anomaly,
+          anomaly: anomaly,
       }
   }
   intervalExpired() {
@@ -208,14 +252,12 @@ class Dashboard extends React.Component {
         .then(
           (result) => {
             this.data = result
-            console.log(result);
             let prevState = this.refreshView(this.state)
             fetch("https://xa2br4ebq9.execute-api.us-east-1.amazonaws.com/default/FetchEquipmentDataFromDynamo")
             .then(res => res.json())
             .then(
               (result) => {
                 this.data = result
-                console.log(result);
                 prevState = this.refreshView(prevState)
                 this.setState(prevState)
               },
@@ -241,6 +283,54 @@ class Dashboard extends React.Component {
 
   render() {
     var that = this
+    dashboardPanelChart.data = canvas => {
+    const ctx = canvas.getContext("2d");
+    var chartColor = "#FFFFFF";
+    var gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+    gradientStroke.addColorStop(0, "#80b6f4");
+    gradientStroke.addColorStop(1, chartColor);
+    var gradientFill = ctx.createLinearGradient(0, 200, 0, 50);
+    gradientFill.addColorStop(0, "rgba(128, 182, 244, 0)");
+    gradientFill.addColorStop(1, "rgba(255, 255, 255, 0.14)");
+
+    return {
+      labels: that.state["anomaly"].labels,
+      datasets: [
+        {
+          label: "Equipment Anomaly Score",
+          borderColor: chartColor,
+          pointBorderColor: chartColor,
+          pointBackgroundColor: "#15304e",
+          pointHoverBackgroundColor: "#ffffff",
+          pointHoverBorderColor: "#15304e",
+          pointBorderWidth: 1,
+          pointHoverRadius: 7,
+          pointHoverBorderWidth: 2,
+          pointRadius: 5,
+          fill: true,
+          backgroundColor: gradientFill,
+          borderWidth: 2,
+          data: that.state["anomaly"].series[0]
+        },
+        {
+          label: "Engine Anomaly Score",
+          borderColor: "#ffa500",
+          pointBorderColor: "#ffa500",
+          pointBackgroundColor: "#15304e",
+          pointHoverBackgroundColor: "#ffa500",
+          pointHoverBorderColor: "#ffa500",
+          pointBorderWidth: 1,
+          pointHoverRadius: 7,
+          pointHoverBorderWidth: 2,
+          pointRadius: 5,
+          fill: true,
+          backgroundColor: gradientFill,
+          borderWidth: 2,
+          data: that.state["anomaly"].series[1]
+        }
+      ]
+    };
+  }
     return (
       <>
         <PanelHeader
@@ -256,7 +346,7 @@ class Dashboard extends React.Component {
         <Row>
               {
                 Object.keys(that.state).map(function(key, idx) {
-                  if (key == "intervalId") {
+                  if (key == "intervalId" || key.toLowerCase().includes("anomaly")) {
                     return null
                   }
                   dashboardShippedProductsChart2.data = canvas => {
@@ -268,20 +358,7 @@ class Dashboard extends React.Component {
     gradientFill.addColorStop(0, (key == "hydr_oil_temp" || key == "spray_nozzle_pressure") ? "rgba(0, 255, 0, 0.40)" : "rgba(0, 0, 255, 0.40)");
     gradientFill.addColorStop(1, (key == "hydr_oil_temp" || key == "spray_nozzle_pressure") ? "rgba(0, 255, 0, 0.40)" : "rgba(0, 0, 255, 0.40)");
     return {
-      labels: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-      ],
+      labels: that.state[key].labels,
       datasets: [
         {
           label: "Active Users",
@@ -300,6 +377,36 @@ class Dashboard extends React.Component {
       ]
     };
   }
+  let statusText = "No Anomalies Detected"
+  let statusIndicator = <status-indicator positive pulse></status-indicator>
+  if (that.state[that.keyToAnomaly[key]] > 4) {
+    statusIndicator = <status-indicator negative pulse></status-indicator>
+    statusText = "Severe Anomaly Detected"
+    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=error&source=" + key + "&score=" + that.state[that.keyToAnomaly[key]])
+        .then(res => res.json())
+        .then(
+          (result) => {
+
+          },
+          (error) => {
+            // TODO: what's an error?
+          }
+        )
+  } else if (that.state[that.keyToAnomaly[key]] > 2.5) {
+    statusText = "Slight Anomaly Detected"
+    statusIndicator = <status-indicator intermediary pulse></status-indicator>
+    fetch("https://jvlkjp1vva.execute-api.us-east-1.amazonaws.com/default/SendAlertToSNS?anomaly=warning&source=" + key + "&score=" + that.state[that.keyToAnomaly[key]])
+        .then(res => res.json())
+        .then(
+          (result) => {
+
+          },
+          (error) => {
+            // TODO: what's an error?
+          }
+        )
+  }
+
                   return (
                     <Col xs={12} md={4}>
               <Card className="card-chart">
@@ -311,15 +418,15 @@ class Dashboard extends React.Component {
                   <div className="chart-area">
                     <Line
                       data={dashboardShippedProductsChart2.data}
-                      options={dashboardShippedProductsChart2.options}
+                      options={dashboardShippedProductsChart.options}
                     />
                   </div>
                 </CardBody>
                 <CardFooter>
                   <div className="stats">
-                    <i className="now-ui-icons arrows-1_refresh-69" /> Just
-                    Updated
+                    {statusText}
                   </div>
+                  {statusIndicator}
                 </CardFooter>
               </Card>
             </Col>
